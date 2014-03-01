@@ -21,6 +21,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.geosocial.R;
 import com.geosocial.adapters.FlickrAdapter;
+import com.geosocial.helpers.URLHelper;
 import com.geosocial.helpers.VolleySingleton;
 import com.geosocial.models.Flickr;
 import com.google.gson.Gson;
@@ -43,7 +44,7 @@ public class MainActivity extends Activity {
 	}
 
 	private void loadData() {
-		String URL = null; //TODO Get flickr API URL
+		String URL = URLHelper.getFlickrURL(); 
         JsonObjectRequest getRequest = new JsonObjectRequest(Request.Method.GET, URL, null,
                 new Response.Listener<JSONObject>()
                 {
@@ -52,7 +53,8 @@ public class MainActivity extends Activity {
                         // display response
                         JSONArray photos = new JSONArray();
                         try {
-                            photos = response.getJSONArray("photos");
+                            response = response.getJSONObject("photos");
+                            photos = response.getJSONArray("photo");
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -72,7 +74,7 @@ public class MainActivity extends Activity {
         );
 
         // add it to the RequestQueue
-        VolleySingleton.getInstance(getActivity()).getRequestQueue().add(getRequest);
+        VolleySingleton.getInstance(this).getRequestQueue().add(getRequest);
 		
 	}
 

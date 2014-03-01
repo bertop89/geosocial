@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.TextView;
 
 import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.NetworkImageView;
@@ -57,13 +58,16 @@ public class FlickrAdapter extends BaseAdapter {
             view = inflater.inflate(R.layout.flickr, viewGroup, false);
 
             viewHolder = new ViewHolder();
-            viewHolder.laImage = (NetworkImageView) view.findViewById(R.id.imageView1);
+            viewHolder.laImage = (NetworkImageView) view.findViewById(R.id.ivFlickr);
+            viewHolder.laText = (TextView) view.findViewById(R.id.tvFlickr);
             view.setTag(viewHolder);
         } else {
             viewHolder = (ViewHolder) view.getTag();
         }
 
         Flickr flickr = (Flickr)data.get(i);
+        
+        viewHolder.laText.setText(flickr.getTitle());
 
         if (viewHolder.laImage!=null) {
             viewHolder.laImage.setImageUrl(flickr.getUrl_m(),mImageLoader);
@@ -74,6 +78,7 @@ public class FlickrAdapter extends BaseAdapter {
 
     static class ViewHolder {
         NetworkImageView laImage;
+        TextView laText;
     }
 
 
