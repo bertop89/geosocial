@@ -29,6 +29,8 @@ import com.geosocial.helpers.LocationUtils;
 import com.geosocial.helpers.URLHelper;
 import com.geosocial.helpers.VolleySingleton;
 import com.geosocial.models.Flickr;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -57,6 +59,11 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		gridView = (GridView) findViewById(R.id.lvMainList);
 		
 		mLocationClient = new LocationClient(this, this, this);
+		
+		// Look up the AdView as a resource and load a request.
+	    AdView adView = (AdView)this.findViewById(R.id.adView);
+	    AdRequest adRequest = new AdRequest.Builder().build();
+	    adView.loadAd(adRequest);
 	}
 
 	private void loadData() {
