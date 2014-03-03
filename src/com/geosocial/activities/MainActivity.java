@@ -57,14 +57,10 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		gridView = (GridView) findViewById(R.id.lvMainList);
 		
 		mLocationClient = new LocationClient(this, this, this);
-		
-		
-		
-		loadData();
 	}
 
 	private void loadData() {
-		String URL = URLHelper.getFlickrURL(); 
+		String URL = URLHelper.getFlickrURL(mCurrentLocation); 
         JsonObjectRequest getRequest = new JsonObjectRequest(Request.Method.GET, URL, null,
                 new Response.Listener<JSONObject>()
                 {
@@ -224,7 +220,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
              * If no resolution is available, display a dialog to the
              * user with the error.
              */
-            //showErrorDialog(connectionResult.getErrorCode());
+            showErrorDialog(connectionResult.getErrorCode());
         }
 	}
 
@@ -232,9 +228,12 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 	public void onConnected(Bundle arg0) {
 		// Display the connection status
         Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
-        if (servicesConnected()) 
-			mCurrentLocation = mLocationClient.getLastLocation();
+        if (servicesConnected()) {
+        	mCurrentLocation = mLocationClient.getLastLocation();
         	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
+        	loadData();
+        }
+			
 		
 	}
 
