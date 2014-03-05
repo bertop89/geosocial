@@ -35,7 +35,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.geosocial.R;
-import com.geosocial.adapters.FlickrAdapter;
+import com.geosocial.adapters.MixedAdapter;
 import com.geosocial.helpers.LocationUtils;
 import com.geosocial.helpers.URLHelper;
 import com.geosocial.helpers.VolleySingleton;
@@ -54,9 +54,10 @@ import com.google.gson.reflect.TypeToken;
 
 public class MainActivity extends Activity implements GooglePlayServicesClient.ConnectionCallbacks,GooglePlayServicesClient.OnConnectionFailedListener, LocationListener {
 	
-    private ArrayList<Flickr> flickrList;
+    private ArrayList<Object> flickrList;
     private Type typeList = new TypeToken<List<Flickr>>(){}.getType();
     private GridView gridView;
+    private MixedAdapter adapter;
     
     private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
     // Stores the current instantiation of the location client in this object
@@ -67,9 +68,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     Location mCurrentLocation;
     
     
-	private ResponseList<Status> statuses;
-
-	@Override
+    @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
@@ -86,11 +85,11 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 
 	}
 	
-	public class TwitterTest extends AsyncTask<Void, Void, Void> {
+	public class TwitterTest extends AsyncTask<Void, Void, QueryResult> {
 
 		@Override
-		protected Void doInBackground(Void... params) {
-			// TODO Auto-generated method stub
+		protected QueryResult doInBackground(Void... void1) {
+			QueryResult result = null;
 			ConfigurationBuilder builder=new ConfigurationBuilder();
 	        builder.setUseSSL(true);
 	        builder.setApplicationOnlyAuthEnabled(true);
@@ -106,15 +105,22 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 	        	Query query = new Query();
 	        	GeoLocation geolocation = new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 	        	query.setGeoCode(geolocation, 5, Query.MILES);
-				QueryResult result = twitter.search(query);
+				result = twitter.search(query);
 				Log.d("twitter", result.toString());
 			} catch (TwitterException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	        return null;
+	        
+			return result;
 		}
-		
+
+		protected void onPostExecute(QueryResult result) {
+			List<twitter4j.Status> tweets = result.getTweets();
+			flickrList.addAll(tweets);
+			adapter.notifyDataSetChanged();
+		}
+
+	
 	}
 	
 	private void loadAds() {
@@ -140,9 +146,10 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
                             e.printStackTrace();
                         }
                         Gson gson = new GsonBuilder().create();
-                        flickrList = new ArrayList<Flickr>();
+                        flickrList = new ArrayList<Object>();
                         flickrList = gson.fromJson(photos.toString(), typeList);
-                        gridView.setAdapter(new FlickrAdapter(MainActivity.this, flickrList));
+                        adapter = new MixedAdapter(MainActivity.this, flickrList);
+                        gridView.setAdapter(adapter);
                     }
                 },
                 new Response.ErrorListener()
