@@ -8,11 +8,22 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import twitter4j.GeoLocation;
+import twitter4j.Query;
+import twitter4j.QueryResult;
+import twitter4j.ResponseList;
+import twitter4j.Status;
+import twitter4j.Twitter;
+import twitter4j.TwitterException;
+import twitter4j.TwitterFactory;
+import twitter4j.auth.OAuth2Token;
+import twitter4j.conf.ConfigurationBuilder;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -35,11 +46,13 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-public class MainActivity extends Activity implements GooglePlayServicesClient.ConnectionCallbacks,GooglePlayServicesClient.OnConnectionFailedListener {
+public class MainActivity extends Activity implements GooglePlayServicesClient.ConnectionCallbacks,GooglePlayServicesClient.OnConnectionFailedListener, LocationListener {
 	
     private ArrayList<Flickr> flickrList;
     private Type typeList = new TypeToken<List<Flickr>>(){}.getType();
@@ -48,8 +61,13 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
     // Stores the current instantiation of the location client in this object
     private LocationClient mLocationClient;
+    // 	A request to connect to Location Services
+    private LocationRequest mLocationRequest;
     // Global variable to hold the current location
     Location mCurrentLocation;
+    
+    
+	private ResponseList<Status> statuses;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +77,47 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		gridView = (GridView) findViewById(R.id.lvMainList);
 		
 		mLocationClient = new LocationClient(this, this, this);
+		// Create a new global location parameters object
+	    mLocationRequest = LocationRequest.create();
+	    mLocationRequest.setNumUpdates(1);
+	    
+			
+		loadAds();
+
+	}
+	
+	public class TwitterTest extends AsyncTask<Void, Void, Void> {
+
+		@Override
+		protected Void doInBackground(Void... params) {
+			// TODO Auto-generated method stub
+			ConfigurationBuilder builder=new ConfigurationBuilder();
+	        builder.setUseSSL(true);
+	        builder.setApplicationOnlyAuthEnabled(true);
+
+	        // setup
+	        Twitter twitter = new TwitterFactory(builder.build()).getInstance();
+
+	        // exercise & verify
+	        twitter.setOAuthConsumer("hdJdvKKdP9f6rf6neBaQ", "YYYOjmmlOqAn0KigHSDifLxVffm90famZ5oXxxc68rQ");
+	        
+	        try {
+	        	OAuth2Token token = twitter.getOAuth2Token();
+	        	Query query = new Query();
+	        	GeoLocation geolocation = new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+	        	query.setGeoCode(geolocation, 5, Query.MILES);
+				QueryResult result = twitter.search(query);
+				Log.d("twitter", result.toString());
+			} catch (TwitterException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        return null;
+		}
 		
+	}
+	
+	private void loadAds() {
 		// Look up the AdView as a resource and load a request.
 	    AdView adView = (AdView)this.findViewById(R.id.adView);
 	    AdRequest adRequest = new AdRequest.Builder().build();
@@ -233,12 +291,11 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 
 	@Override
 	public void onConnected(Bundle arg0) {
-		// Display the connection status
-        Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
+
         if (servicesConnected()) {
-        	mCurrentLocation = mLocationClient.getLastLocation();
-        	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
-        	loadData();
+        	Toast.makeText(getApplicationContext(), "Trying to get location", 
+        			   Toast.LENGTH_LONG).show();
+        	mLocationClient.requestLocationUpdates(mLocationRequest, this);
         }
 			
 		
@@ -246,9 +303,6 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 
 	@Override
 	public void onDisconnected() {
-		// Display the connection status
-        Toast.makeText(this, "Disconnected. Please re-connect.",
-                Toast.LENGTH_SHORT).show();
 		
 	}
 	
@@ -272,5 +326,16 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
             errorDialog.show();
         }
     }
+
+	@Override
+	public void onLocationChanged(Location arg0) {
+		Toast.makeText(getApplicationContext(), "Location obtained, loading data", 
+				   Toast.LENGTH_LONG).show();
+		mCurrentLocation = arg0;
+    	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
+    	loadData();
+    	TwitterTest tarea = new TwitterTest();
+		tarea.execute();
+	}
     
 }
