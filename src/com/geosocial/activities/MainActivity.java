@@ -27,6 +27,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.GridView;
 import android.widget.Toast;
 
@@ -74,18 +75,38 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		setContentView(R.layout.activity_main);
 		
 		gridView = (GridView) findViewById(R.id.lvMainList);
-		flickrList = new ArrayList<Object>();
-		adapter = new MixedAdapter(MainActivity.this, flickrList);
-		gridView.setAdapter(adapter);
 		
+		loadList();
 	    loadLocation();
 		loadAds();
 
 	}
     
-    
+    private void loadList() {
+    	flickrList = new ArrayList<Object>();
+		adapter = new MixedAdapter(MainActivity.this, flickrList);
+		gridView.setAdapter(adapter);	
+	}
 
+	// Initializes the necessary variables for requesting the location
+	private void loadLocation() {
+    	mLocationClient = new LocationClient(this, this, this);
+		// Create a new global location parameters object
+	    mLocationRequest = LocationRequest.create();
+	    mLocationRequest.setNumUpdates(1);
+	}
+	
+	// Load the bottom Ad banner
+	private void loadAds() {
+		// Look up the AdView as a resource and load a request.
+	    AdView adView = (AdView)this.findViewById(R.id.adView);
+	    AdRequest adRequest = new AdRequest.Builder().build();
+	    adView.loadAd(adRequest);
+	}
+
+	// Fetching Tweets (twitter4j)
 	public class TwitterTask extends AsyncTask<Void, Void, QueryResult> {
+
     	
     	@Override
     	protected QueryResult doInBackground(Void... void1) {
@@ -123,21 +144,8 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     	
     }
 	
-	private void loadLocation() {
-    	mLocationClient = new LocationClient(this, this, this);
-		// Create a new global location parameters object
-	    mLocationRequest = LocationRequest.create();
-	    mLocationRequest.setNumUpdates(1);
-	}
-		
-	private void loadAds() {
-		// Look up the AdView as a resource and load a request.
-	    AdView adView = (AdView)this.findViewById(R.id.adView);
-	    AdRequest adRequest = new AdRequest.Builder().build();
-	    adView.loadAd(adRequest);
-	}
-
-	private void loadData() {
+	// Fetching Flickr (Volley)
+	private void loadFlickr() {
 		String URL = URLHelper.getFlickrURL(mCurrentLocation); 
         JsonObjectRequest getRequest = new JsonObjectRequest(Request.Method.GET, URL, null,
                 new Response.Listener<JSONObject>()
@@ -176,6 +184,27 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
+	}
+	
+	
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		
+		switch (item.getItemId()) {
+			case R.id.action_refresh:
+				loadList();
+				Toast.makeText(getApplicationContext(), "Location obtained, loading data", 
+						   Toast.LENGTH_LONG).show();
+				mCurrentLocation = mLocationClient.getLastLocation();
+		    	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
+		    	loadFlickr();
+		    	TwitterTask tarea = new TwitterTask();
+				tarea.execute();
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}	
 	}
 
 	/*
@@ -314,7 +343,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 
 	@Override
 	public void onDisconnected() {
-		
+		Log.d("Location","Disconnected");
 	}
 	
 	/**
@@ -344,7 +373,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 				   Toast.LENGTH_LONG).show();
 		mCurrentLocation = arg0;
     	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
-    	loadData();
+    	loadFlickr();
     	TwitterTask tarea = new TwitterTask();
 		tarea.execute();
 	}
