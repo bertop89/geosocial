@@ -2,6 +2,8 @@ package com.geosocial.activities;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.json.JSONArray;
@@ -11,8 +13,6 @@ import org.json.JSONObject;
 import twitter4j.GeoLocation;
 import twitter4j.Query;
 import twitter4j.QueryResult;
-import twitter4j.ResponseList;
-import twitter4j.Status;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
@@ -74,55 +74,62 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		setContentView(R.layout.activity_main);
 		
 		gridView = (GridView) findViewById(R.id.lvMainList);
+		flickrList = new ArrayList<Object>();
+		adapter = new MixedAdapter(MainActivity.this, flickrList);
+		gridView.setAdapter(adapter);
 		
-		mLocationClient = new LocationClient(this, this, this);
-		// Create a new global location parameters object
-	    mLocationRequest = LocationRequest.create();
-	    mLocationRequest.setNumUpdates(1);
-	    
-			
+	    loadLocation();
 		loadAds();
 
 	}
+    
+    
+
+	public class TwitterTask extends AsyncTask<Void, Void, QueryResult> {
+    	
+    	@Override
+    	protected QueryResult doInBackground(Void... void1) {
+    		QueryResult result = null;
+    		ConfigurationBuilder builder=new ConfigurationBuilder();
+            builder.setUseSSL(true);
+            builder.setApplicationOnlyAuthEnabled(true);
+
+            // setup
+            Twitter twitter = new TwitterFactory(builder.build()).getInstance();
+
+            // exercise & verify
+            twitter.setOAuthConsumer("hdJdvKKdP9f6rf6neBaQ", "YYYOjmmlOqAn0KigHSDifLxVffm90famZ5oXxxc68rQ");
+            
+            try {
+            	OAuth2Token token = twitter.getOAuth2Token();
+            	Query query = new Query();
+            	GeoLocation geolocation = new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+            	query.setGeoCode(geolocation, 5, Query.MILES);
+    			result = twitter.search(query);
+    			Log.d("twitter", result.toString());
+    		} catch (TwitterException e) {
+    			e.printStackTrace();
+    		}
+            
+    		return result;
+    	}
+
+    	protected void onPostExecute(QueryResult result) {
+    		List<twitter4j.Status> tweets = result.getTweets();
+    		flickrList.addAll(tweets);
+    		Collections.shuffle(flickrList);
+    		adapter.notifyDataSetChanged();
+    	}
+    	
+    }
 	
-	public class TwitterTest extends AsyncTask<Void, Void, QueryResult> {
-
-		@Override
-		protected QueryResult doInBackground(Void... void1) {
-			QueryResult result = null;
-			ConfigurationBuilder builder=new ConfigurationBuilder();
-	        builder.setUseSSL(true);
-	        builder.setApplicationOnlyAuthEnabled(true);
-
-	        // setup
-	        Twitter twitter = new TwitterFactory(builder.build()).getInstance();
-
-	        // exercise & verify
-	        twitter.setOAuthConsumer("hdJdvKKdP9f6rf6neBaQ", "YYYOjmmlOqAn0KigHSDifLxVffm90famZ5oXxxc68rQ");
-	        
-	        try {
-	        	OAuth2Token token = twitter.getOAuth2Token();
-	        	Query query = new Query();
-	        	GeoLocation geolocation = new GeoLocation(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-	        	query.setGeoCode(geolocation, 5, Query.MILES);
-				result = twitter.search(query);
-				Log.d("twitter", result.toString());
-			} catch (TwitterException e) {
-				e.printStackTrace();
-			}
-	        
-			return result;
-		}
-
-		protected void onPostExecute(QueryResult result) {
-			List<twitter4j.Status> tweets = result.getTweets();
-			flickrList.addAll(tweets);
-			adapter.notifyDataSetChanged();
-		}
-
-	
+	private void loadLocation() {
+    	mLocationClient = new LocationClient(this, this, this);
+		// Create a new global location parameters object
+	    mLocationRequest = LocationRequest.create();
+	    mLocationRequest.setNumUpdates(1);
 	}
-	
+		
 	private void loadAds() {
 		// Look up the AdView as a resource and load a request.
 	    AdView adView = (AdView)this.findViewById(R.id.adView);
@@ -146,10 +153,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
                             e.printStackTrace();
                         }
                         Gson gson = new GsonBuilder().create();
-                        flickrList = new ArrayList<Object>();
-                        flickrList = gson.fromJson(photos.toString(), typeList);
-                        adapter = new MixedAdapter(MainActivity.this, flickrList);
-                        gridView.setAdapter(adapter);
+                        flickrList.addAll((Collection)gson.fromJson(photos.toString(), typeList));                        
                     }
                 },
                 new Response.ErrorListener()
@@ -341,7 +345,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
 		mCurrentLocation = arg0;
     	Log.d("Location", LocationUtils.getLatLng(this, mCurrentLocation));
     	loadData();
-    	TwitterTest tarea = new TwitterTest();
+    	TwitterTask tarea = new TwitterTask();
 		tarea.execute();
 	}
     
